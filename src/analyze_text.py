@@ -9,7 +9,8 @@ import evaluation_fns_np as eval_fns
 import constants
 import os
 import util
-
+import spacy
+import tempfile
 
 arg_parser = argparse.ArgumentParser(description='')
 arg_parser.add_argument('--test_files',
@@ -66,12 +67,15 @@ hparams = train_utils.load_hparams(args, model_config)
 
 dev_filenames = args.dev_files.split(',')
 test_filenames = args.test_files.split(',') if args.test_files else []
+text_filenames = leftovers if leftovers else []
 
 vocab = Vocab(data_config, args.save_dir)
 vocab.update(test_filenames)
 
 embedding_files = [embeddings_map['pretrained_embeddings'] for embeddings_map in model_config['embeddings'].values()
                    if 'pretrained_embeddings' in embeddings_map]
+
+nlp = spacy.load('en')
 
 # Generate mappings from feature/label names to indices in the model_fn inputs
 # feature_idx_map = {}
@@ -106,6 +110,14 @@ def dev_input_fn():
   return train_utils.get_input_fn(vocab, data_config, dev_filenames, hparams.batch_size, num_epochs=1, shuffle=False,
                                   embedding_files=embedding_files)
 
+def convert_to_reference_format(text):
+  doc = nlp(text)
+  lines = []
+  for sentence_id, sentence in enumerate(doc.sents):
+    for token_id, token in enumerate(sentence):
+      lines.append(f'conll05\t{sentence_id}\t{token_id}\t{token.text}\t_\t_\t_\t_\t_\t-\t-\t-\t-\tO')
+    lines.append('')
+  return '\n'.join(lines)
 
 def eval_fn(input_op, sess):
   eval_accumulators = eval_fns.get_accumulators(task_config)
@@ -131,18 +143,6 @@ def eval_fn(input_op, sess):
       # todo: implement ensembling
       combined_scores = {k: v for k, v in combined_predictions.items() if k.endswith("_scores")}
       combined_probabilities = {k: v for k, v in combined_predictions.items() if k.endswith("_probabilities")}
-
-      # for model_outputs in predictions:
-      #   for key, val in model_outputs.items():
-      #     if key.endswith("_probabilities"):
-      #       if key not in combined_probabilities:
-      #         print("init", key)
-      #         combined_probabilities[key] = val
-      #       else:
-      #         print("adding ", key)
-      #         # product of experts ensembling
-      #         if val.shape == combined_probabilities[key].shape:
-      #           combined_scores[key] = np.multiply(combined_probabilities[key], val)
 
       combined_predictions.update({k.replace('scores', 'predictions'): np.argmax(v, axis=-1) for k, v in combined_scores.items()})
       combined_predictions.update({k.replace('probabilities', 'predictions'): np.argmax(v, axis=-1) for k, v in combined_probabilities.items()})
@@ -182,7 +182,26 @@ def eval_fn(input_op, sess):
                                                vocab.reverse_maps, tokens_to_keep)
           eval_fn_params['accumulator'] = eval_accumulators[eval_name]
           eval_result = eval_fns.dispatch(eval_map['name'])(**eval_fn_params)
-          eval_results[eval_name] = eval_result
+
+
+          # write predicted labels
+          # called by conll_srl_eval called called by conll_srl_eval_np dispatched to by eval_fns.dispatch
+
+          #def conll_srl_eval(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
+                      #pred_srl_eval_file, gold_srl_eval_file, pos_predictions=None, pos_targets=None):
+          # TODO create temp file temp_out, then call write_srl_eval then write file content to stdout
+          # TODO Generate/retriev words, predicate_predictions, sent_lens and srl_predictions
+          #write_srl_eval(temp_out, words, predicate_predictions, sent_lens, srl_predictions)
+          # Or use write_srl_debug
+          # write_srl_debug(filename, words, predicates, sent_lens, role_labels, pos_predictions, pos_targets)
+          #str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
+          #str_predictions = [list(map(reverse_maps['parse_label'].get, s)) for s in predictions]
+          #str_targets = [list(map(reverse_maps['parse_label'].get, s)) for s in targets]
+          #str_pos_targets = [list(map(reverse_maps['gold_pos'].get, s)) for s in pos_targets]
+
+          #write_srl_debug(temp_out, words, predicates, sent_lens, role_labels, pos_predictions, pos_targets)
+
+          #eval_results[eval_name] = eval_result
     except tf.errors.OutOfRangeError:
       break
 
@@ -193,16 +212,49 @@ with tf.Session() as sess:
 
   dev_input_op = dev_input_fn()
 
-  test_input_ops = {}
-  for test_file in test_filenames:
-    def test_input_fn():
-      return train_utils.get_input_fn(vocab, data_config, [test_file], hparams.batch_size, num_epochs=1, shuffle=False,
+  #test_input_ops = {}
+  #for test_file in test_filenames:
+    #def test_input_fn():
+      #return train_utils.get_input_fn(vocab, data_config, [test_file], hparams.batch_size, num_epochs=1, shuffle=False,
+                                      #embedding_files=embedding_files)
+    #test_input_ops[test_file] = test_input_fn()
+
+  # Must convert input text file in CoNLL05 files by tokenizing and splitting
+  # in sentences. Use spacy ?
+  tokenized_files = []
+  tokenized_filenames = []
+  for text_file in text_filenames:
+    temp = tempfile.NamedTemporaryFile(mode='w+t')
+    with open(text_file, 'r') as f:
+      text = f.read()
+
+      doc = nlp(text)
+      for sentence_id, sentence in enumerate(doc.sents):
+        for token_id, token in enumerate(sentence):
+          line = f'conll05\t{sentence_id}\t{token_id}\t{token.text}\t_\t_\t_\t_'
+          temp.writelines(line)
+
+    tokenized_files.append(temp)
+    tokenized_filenames.append(temp.name)
+
+  text_input_ops = {}
+  for tokenized_filename in tokenized_filenames:
+    def text_input_fn():
+      return train_utils.get_input_fn(vocab, data_config, [tokenized_filename],
+                                      hparams.batch_size, num_epochs=1,
+                                      shuffle=False,
                                       embedding_files=embedding_files)
-    test_input_ops[test_file] = test_input_fn()
+    text_input_ops[tokenized_filename] = text_input_fn()
 
   sess.run(tf.tables_initializer())
 
-  for test_file, test_input_op in test_input_ops.items():
-    tf.logging.log(tf.logging.INFO, "Evaluating on test file: %s" % str(test_file))
-    eval_fn(test_input_op, sess)
+  #for test_file, test_input_op in test_input_ops.items():
+    #tf.logging.log(tf.logging.INFO, "Evaluating on test file: %s" % str(test_file))
+    #eval_fn(test_input_op, sess)
 
+  for tokenized_filename, text_input_op in text_input_ops.items():
+    tf.logging.log(tf.logging.INFO, f"Analyzinf text file: {tokenized_filename}")
+    eval_fn(text_input_op, sess)
+
+  for tokenized_file in tokenized_files:
+    tokenized_file.close()

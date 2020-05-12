@@ -16,6 +16,7 @@ echo "Using CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES
 transition_stats=$data_dir/transition_probs.tsv
 
 python3 src/analyze_text.py \
+--text_file $text_file \
 --test_files $test_files \
 --dev_files $dev_files \
 --transition_stats $transition_stats \

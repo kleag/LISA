@@ -2,6 +2,11 @@ import data_converters
 
 
 def conll_data_generator(filenames, data_config):
+  """
+  Read CoNLL formated @filenames files. Yields each sentence.
+  Select columns defined in @data_config. data_config optionaly specify
+  converters.
+  """
   for filename in filenames:
     with open(filename, 'r') as f:
       sents = 0
