@@ -236,6 +236,7 @@ def write_srl_debug(filename, words, predicates, sent_lens, role_labels, pos_pre
 
 def conll_srl(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
                       pred_srl_eval_file, gold_srl_eval_file, pos_predictions=None, pos_targets=None):
+  tf.logging.log(tf.logging.INFO, f"conll_srl: {pred_srl_eval_file}")
 
   # predictions: num_predicates_in_batch x batch_seq_len tensor of ints
   # predicate predictions: batch_size x batch_seq_len [ x 1?] tensor of ints (0/1)
