@@ -13,6 +13,13 @@ def accuracy_tf(predictions, targets, mask):
     return tf.metrics.accuracy(labels=targets, predictions=predictions, weights=mask)
 
 
+def conll_srl_tf(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
+                      gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets):
+
+  with tf.name_scope('conll_srl'):
+    return 0, 0
+
+
 def conll_srl_eval_tf(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
                       gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets):
 
@@ -131,6 +138,7 @@ def conll_parse_eval_tf(predictions, targets, parse_head_predictions, words, mas
 
 dispatcher = {
   'accuracy': accuracy_tf,
+  'conll_srl': conll_srl_eval_tf,
   'conll_srl_eval': conll_srl_eval_tf,
   'conll_parse_eval': conll_parse_eval_tf,
   'conll09_srl_eval': conll09_srl_eval_tf,

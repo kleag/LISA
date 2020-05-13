@@ -507,6 +507,7 @@ fn_dispatcher = {
 
 accumulator_factory = {
   'accuracy': lambda: {'correct': 0., 'total': 0.},
+  'conll_srl': lambda: {'correct': 0., 'excess': 0., 'missed': 0.},
   'conll_srl_eval': lambda: {'correct': 0., 'excess': 0., 'missed': 0.},
   'conll_parse_eval': lambda: {'total': 0., 'corrects': np.zeros(3)},
   'conll09_srl_eval': lambda: {'correct': 0., 'excess': 0., 'missed': 0.},
@@ -517,14 +518,14 @@ def dispatch(fn_name):
   try:
     return fn_dispatcher[fn_name]
   except KeyError:
-    util.fatal_error('Undefined evaluation function `%s' % fn_name)
+    util.fatal_error('dispatch: Undefined evaluation function `%s' % fn_name)
 
 
 def get_accumulator(fn_name):
   try:
     return accumulator_factory[fn_name]()
   except KeyError:
-    util.fatal_error('Undefined evaluation function `%s' % fn_name)
+    util.fatal_error('get_accumulator: Undefined evaluation function `%s' % fn_name)
 
 
 def get_accumulators(task_config):
