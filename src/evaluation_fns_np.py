@@ -401,6 +401,28 @@ def conll_parse_eval(parse_label_predictions, parse_head_predictions, words, mas
   return total, np.array([labeled_correct, unlabeled_correct, label_correct])
 
 
+def conll_srl_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
+                   gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, accumulator):
+
+  # first, use reverse maps to convert ints to strings
+  str_srl_predictions = [list(map(reverse_maps['srl'].get, s)) for s in predictions]
+  str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
+  str_srl_targets = [list(map(reverse_maps['srl'].get, s)) for s in targets]
+
+  correct, excess, missed = conll_srl(str_srl_predictions, predicate_predictions, str_words, mask, str_srl_targets,
+                                           predicate_targets, pred_srl_eval_file, gold_srl_eval_file)
+
+  accumulator['correct'] += correct
+  accumulator['excess'] += excess
+  accumulator['missed'] += missed
+
+  precision = accumulator['correct'] / (accumulator['correct'] + accumulator['excess'])
+  recall = accumulator['correct'] / (accumulator['correct'] + accumulator['missed'])
+  f1 = 2 * precision * recall / (precision + recall)
+
+  return f1
+
+
 def conll_srl_eval_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
                    gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, accumulator):
 
@@ -476,6 +498,7 @@ def conll_parse_eval_np(predictions, targets, parse_head_predictions, words, mas
 
 fn_dispatcher = {
   'accuracy': accuracy_np,
+  'conll_srl': conll_srl_np,
   'conll_srl_eval': conll_srl_eval_np,
   'conll_parse_eval': conll_parse_eval_np,
   'conll09_srl_eval': conll09_srl_eval_np
