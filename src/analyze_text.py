@@ -253,7 +253,7 @@ with tf.Session() as sess:
     #eval_fn(test_input_op, sess)
 
   for tokenized_filename, text_input_op in text_input_ops.items():
-    tf.logging.log(tf.logging.INFO, f"Analyzinf text file: {tokenized_filename}")
+    tf.logging.log(tf.logging.INFO, f"Analyzing text file: {tokenized_filename}")
     eval_fn(text_input_op, sess)
 
   for tokenized_file in tokenized_files:
