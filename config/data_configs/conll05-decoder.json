@@ -1,0 +1,42 @@
+{
+  "id": {
+    "conll_idx": 2
+  },
+  "sent_id": {
+    "conll_idx": 1,
+    "label": true
+  },
+  "word": {
+    "conll_idx": 3,
+    "feature": true,
+    "vocab": "word",
+    "oov": false,
+    "updatable": true
+  },
+  "word_type": {
+    "conll_idx": 3,
+    "feature": true,
+    "vocab": "embeddings/glove.6B.100d.txt",
+    "converter":  {
+      "name": "lowercase"
+    },
+    "oov": true
+  },
+
+  "domain": {
+    "conll_idx": 0,
+    "vocab": "domain",
+    "converter": {
+      "name": "strip_conll12_domain"
+    }
+  },
+  "srl": {
+    "conll_idx": [14, -1],
+    "type": "range",
+    "label": true,
+    "vocab": "srl",
+    "converter": {
+      "name": "idx_range_converter"
+    }
+  }
+}

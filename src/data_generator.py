@@ -1,4 +1,5 @@
 import data_converters
+import tensorflow as tf
 
 
 def conll_data_generator(filenames, data_config):
@@ -25,6 +26,7 @@ def conll_data_generator(filenames, data_config):
               datum_idx = data_config[d]['conll_idx']
               converter_name = data_config[d]['converter']['name'] if 'converter' in data_config[d] else 'default_converter'
               converter_params = data_converters.get_params(data_config[d], split_line, datum_idx)
+              tf.logging.log(tf.logging.INFO, f"conll_data_generator dispatching: {converter_name}, {converter_params}")
               data = data_converters.dispatch(converter_name)(**converter_params)
               data_vals.extend(data)
           # print(tuple(data_vals))

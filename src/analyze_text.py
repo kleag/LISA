@@ -231,8 +231,12 @@ with tf.Session() as sess:
       doc = nlp(text)
       for sentence_id, sentence in enumerate(doc.sents):
         for token_id, token in enumerate(sentence):
-          line = f'conll05\t{sentence_id}\t{token_id}\t{token.text}\t_\t_\t_\t_'
-          temp.writelines(line)
+          if len(token.text) > 0 and token.text != '\n':
+            line = f'conll05\t{sentence_id}\t{token_id}\t{token.text}\t_\t_\t_\t_\n'
+            #line = f'{token_id}\t{token.text}\t_\t_\t_\t_\t_\t_\n'
+            tf.logging.log(tf.logging.INFO, f"Writing to temp file {temp.name}: {line}")
+            temp.write(line)
+    temp.flush()
 
     tokenized_files.append(temp)
     tokenized_filenames.append(temp.name)
