@@ -51,6 +51,7 @@ def load_json_configs(config_file_list, args=None):
   :param args: command line args to replace special strings in json
   :return: map containing combined configurations
   """
+  tf.logging.log(tf.logging.INFO, f"train_utils.load_json_configs({config_file_list})")
   combined_config = {}
   if config_file_list:
     config_files = config_file_list.split(',')
