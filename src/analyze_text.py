@@ -235,9 +235,15 @@ with tf.Session() as sess:
 
       doc = nlp(text)
       for sentence_id, sentence in enumerate(doc.sents):
+        tokens = {}
+        for token_id, token in enumerate(sentence):
+          tokens[token] = token_id
         for token_id, token in enumerate(sentence):
           if len(token.text) > 0 and token.text != '\n':
-            line = f'conll05\t{sentence_id}\t{token_id}\t{token.text}\t_\t_\t_\t_\n'
+          #0:domain  1:sent_id 2:id  3:word+word_type  4:gold_pos    5:auto_pos    6:parse_head  7:parse_label _
+
+            line = f'conll05\t{sentence_id}\t{token_id}\t{token.text}\t{token.pos_}\t{token.tag_}\t{tokens[token.head]}\t{token.dep_}\n')
+            #line = f'conll05\t{sentence_id}\t{token_id}\t{token.text}\t_\t_\t_\t_\n'
             #line = f'{token_id}\t{token.text}\t_\t_\t_\t_\t_\t_\n'
             tf.logging.log(tf.logging.INFO, f"Writing to temp file {temp.name}: {line}")
             temp.write(line)
