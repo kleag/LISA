@@ -114,8 +114,13 @@ def convert_to_reference_format(text):
   doc = nlp(text)
   lines = []
   for sentence_id, sentence in enumerate(doc.sents):
+    tokens = {}
     for token_id, token in enumerate(sentence):
-      lines.append(f'conll05\t{sentence_id}\t{token_id}\t{token.text}\t_\t_\t_\t_\t_\t-\t-\t-\t-\tO')
+      tokens[token] = token_id
+    for token_id, token in enumerate(sentence):
+      #0:domain  1:sent_id 2:id  3:word+word_type  4:gold_pos    5:auto_pos    6:parse_head  7:parse_label _
+
+      lines.append(f'conll05\t{sentence_id}\t{token_id}\t{token.text}\t{token.pos_}\t{token.tag_}\t{tokens[token.head]}\t{token.dep_}\t_\t-\t-\t-\t-\tO')
     lines.append('')
   return '\n'.join(lines)
 
