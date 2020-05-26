@@ -103,6 +103,7 @@ def accuracy_np(predictions, targets, mask, accumulator):
 # widen     *     (V*)
 # -         *     (A4*
 def write_srl_eval(filename, words, predicates, sent_lens, role_labels):
+  tf.logging.log(tf.logging.INFO, "write_srl_eval: %s" % str(filename)) 
   with open(filename, 'w') as f:
     role_labels_start_idx = 0
     num_predicates_per_sent = np.sum(predicates, -1)
@@ -234,9 +235,9 @@ def write_srl_debug(filename, words, predicates, sent_lens, role_labels, pos_pre
       print(file=f)
 
 
-def conll_srl(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
+def conll_srl_decoder(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
                       pred_srl_eval_file, gold_srl_eval_file, pos_predictions=None, pos_targets=None):
-  tf.logging.log(tf.logging.INFO, f"conll_srl: {pred_srl_eval_file}")
+  tf.logging.log(tf.logging.INFO, f"conll_srl_decoder: {pred_srl_eval_file}")
 
   # predictions: num_predicates_in_batch x batch_seq_len tensor of ints
   # predicate predictions: batch_size x batch_seq_len [ x 1?] tensor of ints (0/1)
@@ -254,7 +255,7 @@ def conll_srl(srl_predictions, predicate_predictions, words, mask, srl_targets, 
 
 def conll_srl_eval(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
                       pred_srl_eval_file, gold_srl_eval_file, pos_predictions=None, pos_targets=None):
-
+  tf.logging.log(tf.logging.INFO, "conll_srl_eval")
   # predictions: num_predicates_in_batch x batch_seq_len tensor of ints
   # predicate predictions: batch_size x batch_seq_len [ x 1?] tensor of ints (0/1)
   # words: batch_size x batch_seq_len tensor of ints (0/1)
@@ -499,6 +500,7 @@ def conll_parse_eval_np(predictions, targets, parse_head_predictions, words, mas
 
 fn_dispatcher = {
   'accuracy': accuracy_np,
+  'conll_srl_decoder': conll_srl_decoder,
   'conll_srl': conll_srl_np,
   'conll_srl_eval': conll_srl_eval_np,
   'conll_parse_eval': conll_parse_eval_np,
@@ -508,6 +510,7 @@ fn_dispatcher = {
 
 accumulator_factory = {
   'accuracy': lambda: {'correct': 0., 'total': 0.},
+  'conll_srl_decoder': lambda: {'correct': 0., 'excess': 0., 'missed': 0.},
   'conll_srl': lambda: {'correct': 0., 'excess': 0., 'missed': 0.},
   'conll_srl_eval': lambda: {'correct': 0., 'excess': 0., 'missed': 0.},
   'conll_parse_eval': lambda: {'total': 0., 'corrects': np.zeros(3)},
