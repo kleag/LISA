@@ -13,6 +13,7 @@ def convert_bilou(bio_predicted_roles):
   :param bio_predicted_roles: sequence of BIO-encoded predicted role labels
   :return: sequence of conll-formatted predicted role labels
   '''
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.convert_bilou")
 
   converted = []
   started_types = []
@@ -72,6 +73,7 @@ def convert_conll(predicted_roles):
   :param bio_predicted_roles: sequence of predicted role labels
   :return: sequence of conll-formatted predicted role labels
   '''
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.convert_conll")
 
   def convert_single(s):
     s = s if isinstance(s, str) else s.decode('utf-8')
@@ -82,6 +84,7 @@ def convert_conll(predicted_roles):
 
 
 def accuracy_np(predictions, targets, mask, accumulator):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.accuracy_np")
 
   correct = np.sum(np.multiply(predictions == targets, mask))
   total = np.sum(mask)
@@ -103,7 +106,7 @@ def accuracy_np(predictions, targets, mask, accumulator):
 # widen     *     (V*)
 # -         *     (A4*
 def write_srl_eval(filename, words, predicates, sent_lens, role_labels):
-  tf.logging.log(tf.logging.INFO, "write_srl_eval: %s" % str(filename)) 
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.write_srl_eval({filename},...)")
   with open(filename, 'w') as f:
     role_labels_start_idx = 0
     num_predicates_per_sent = np.sum(predicates, -1)
@@ -136,6 +139,7 @@ def write_srl_eval(filename, words, predicates, sent_lens, role_labels):
 # 2	's	_	_	PART	PART	_	_	2	2	case	case	_	_	_	_	_	_
 # 3	temperature	_	_	NOUN	NOUN	_	_	7	7	nsubjpass	nsubjpass	Y	temperature.01	A2	A1	_	_
 def write_srl_eval_09(filename, words, predicates, sent_lens, role_labels, parse_heads, parse_labels, pos_tags):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.write_srl_eval_09({filename})")
   with open(filename, 'w') as f:
     role_labels_start_idx = 0
 
@@ -180,6 +184,7 @@ def write_srl_eval_09(filename, words, predicates, sent_lens, role_labels, parse
 # 4       temperature     _       NN      _       _       7       nsubjpass
 # 5       will            _       MD      _       _       7       aux
 def write_parse_eval(filename, words, parse_heads, sent_lens, parse_labels, pos_tags):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.write_parse_eval({filename},...)")
 
   words = util.batch_str_decode(words)
   pos_tags = util.batch_str_decode(pos_tags)
@@ -201,6 +206,7 @@ def write_parse_eval(filename, words, parse_heads, sent_lens, parse_labels, pos_
 
 
 def write_srl_debug(filename, words, predicates, sent_lens, role_labels, pos_predictions, pos_targets):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.write_srl_debug({filename},...)")
   with open(filename, 'w') as f:
     role_labels_start_idx = 0
     num_predicates_per_sent = np.sum(predicates, -1)
@@ -237,7 +243,7 @@ def write_srl_debug(filename, words, predicates, sent_lens, role_labels, pos_pre
 
 def conll_srl_decoder(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
                       pred_srl_eval_file, gold_srl_eval_file, pos_predictions=None, pos_targets=None):
-  tf.logging.log(tf.logging.INFO, f"conll_srl_decoder: {pred_srl_eval_file}")
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.conll_srl_decoder: {pred_srl_eval_file}")
 
   # predictions: num_predicates_in_batch x batch_seq_len tensor of ints
   # predicate predictions: batch_size x batch_seq_len [ x 1?] tensor of ints (0/1)
@@ -255,7 +261,7 @@ def conll_srl_decoder(srl_predictions, predicate_predictions, words, mask, srl_t
 
 def conll_srl_eval(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
                       pred_srl_eval_file, gold_srl_eval_file, pos_predictions=None, pos_targets=None):
-  tf.logging.log(tf.logging.INFO, "conll_srl_eval")
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_srl_eval")
   # predictions: num_predicates_in_batch x batch_seq_len tensor of ints
   # predicate predictions: batch_size x batch_seq_len [ x 1?] tensor of ints (0/1)
   # words: batch_size x batch_seq_len tensor of ints (0/1)
@@ -290,6 +296,7 @@ def conll_srl_eval(srl_predictions, predicate_predictions, words, mask, srl_targ
 def conll09_srl_eval(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
                      parse_label_predictions, parse_head_predictions, parse_label_targets, parse_head_targets,
                      pos_targets, pos_predictions, pred_srl_eval_file, gold_srl_eval_file):
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll09_srl_eval")
 
   # predictions: num_predicates_in_batch x batch_seq_len tensor of ints
   # predicate predictions: batch_size x batch_seq_len [ x 1?] tensor of ints (0/1)
@@ -374,6 +381,7 @@ def conll09_srl_eval(srl_predictions, predicate_predictions, words, mask, srl_ta
 
 def conll_parse_eval(parse_label_predictions, parse_head_predictions, words, mask, parse_label_targets,
                         parse_head_targets, pred_eval_file, gold_eval_file, pos_targets):
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_parse_eval")
 
   # need to print for every word in every sentence
   sent_lens = np.sum(mask, -1).astype(np.int32)
@@ -405,6 +413,7 @@ def conll_parse_eval(parse_label_predictions, parse_head_predictions, words, mas
 
 def conll_srl_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
                    gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, accumulator):
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_srl_np")
 
   # first, use reverse maps to convert ints to strings
   str_srl_predictions = [list(map(reverse_maps['srl'].get, s)) for s in predictions]
@@ -427,6 +436,7 @@ def conll_srl_np(predictions, targets, predicate_predictions, words, mask, predi
 
 def conll_srl_eval_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
                    gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, accumulator):
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_srl_eval_np")
 
   # first, use reverse maps to convert ints to strings
   str_srl_predictions = [list(map(reverse_maps['srl'].get, s)) for s in predictions]
@@ -450,6 +460,7 @@ def conll_srl_eval_np(predictions, targets, predicate_predictions, words, mask, 
 def conll09_srl_eval_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
                         gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, parse_head_predictions,
                         parse_head_targets, parse_label_predictions, parse_label_targets, accumulator):
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll09_srl_eval_np")
 
   # first, use reverse maps to convert ints to strings
   str_srl_predictions = [list(map(reverse_maps['srl'].get, s)) for s in predictions]
@@ -480,6 +491,7 @@ def conll09_srl_eval_np(predictions, targets, predicate_predictions, words, mask
 
 def conll_parse_eval_np(predictions, targets, parse_head_predictions, words, mask, parse_head_targets, reverse_maps,
                         gold_parse_eval_file, pred_parse_eval_file, pos_targets, accumulator):
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_parse_eval_np")
 
   # first, use reverse maps to convert ints to strings
   str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
@@ -519,6 +531,7 @@ accumulator_factory = {
 
 
 def dispatch(fn_name):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.dispatch({fn_name})")
   try:
     return fn_dispatcher[fn_name]
   except KeyError:
@@ -526,6 +539,7 @@ def dispatch(fn_name):
 
 
 def get_accumulator(fn_name):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.get_accumulator({fn_name})")
   try:
     return accumulator_factory[fn_name]()
   except KeyError:
@@ -533,6 +547,7 @@ def get_accumulator(fn_name):
 
 
 def get_accumulators(task_config):
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.get_accumulators")
   eval_accumulators = {}
   # for i in layer_task_config:
   for task, task_map in task_config.items():
@@ -543,6 +558,7 @@ def get_accumulators(task_config):
 
 def get_params(task, task_map, predictions, features, labels, reverse_maps, tokens_to_keep):
   # always pass through predictions, targets and mask
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.get_params")
   params = {'predictions': predictions['%s_predictions' % task], 'targets': labels[task], 'mask': tokens_to_keep}
   if 'params' in task_map:
     params_map = task_map['params']

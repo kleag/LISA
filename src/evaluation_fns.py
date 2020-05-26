@@ -4,17 +4,20 @@ import nn_utils
 
 
 def create_metric_variable(name, shape, dtype):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns.create_metric_variable")
   return tf.get_variable(name=name, shape=shape, dtype=dtype, trainable=False,
                          collections=[tf.GraphKeys.LOCAL_VARIABLES, tf.GraphKeys.METRIC_VARIABLES])
 
 
 def accuracy_tf(predictions, targets, mask):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns.accuracy_tf")
   with tf.name_scope('accuracy'):
     return tf.metrics.accuracy(labels=targets, predictions=predictions, weights=mask)
 
 
 def conll_srl_tf(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
                       gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns.conll_srl_tf")
 
   with tf.name_scope('conll_srl'):
     return 0, 0
@@ -22,6 +25,7 @@ def conll_srl_tf(predictions, targets, predicate_predictions, words, mask, predi
 
 def conll_srl_eval_tf(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
                       gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns.conll_srl_eval_tf")
 
   with tf.name_scope('conll_srl_eval'):
 
@@ -62,6 +66,7 @@ def conll_srl_eval_tf(predictions, targets, predicate_predictions, words, mask, 
 def conll09_srl_eval_tf(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
                       gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, parse_head_targets,
                         parse_head_predictions, parse_label_targets, parse_label_predictions):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns.conll09_srl_eval_tf")
 
   with tf.name_scope('conll_srl_eval'):
 
@@ -107,6 +112,7 @@ def conll09_srl_eval_tf(predictions, targets, predicate_predictions, words, mask
 # todo share computation with srl eval
 def conll_parse_eval_tf(predictions, targets, parse_head_predictions, words, mask, parse_head_targets, reverse_maps,
                    gold_parse_eval_file, pred_parse_eval_file, pos_targets):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns.conll_parse_eval_tf")
 
   with tf.name_scope('conll_parse_eval'):
 
@@ -146,6 +152,7 @@ dispatcher = {
 
 
 def dispatch(fn_name):
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns.dispatch({fn_name})")
   try:
     return dispatcher[fn_name]
   except KeyError:
@@ -154,6 +161,7 @@ def dispatch(fn_name):
 
 
 def get_params(task_outputs, task_map, train_outputs, features, labels, task_labels, reverse_maps, tokens_to_keep):
+  tf.logging.log(tf.logging.INFO, "evaluation_fns.get_params")
 
   # always pass through predictions, targets and mask
   params = {'predictions': task_outputs['predictions'], 'targets': task_labels, 'mask': tokens_to_keep}
