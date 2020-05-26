@@ -208,11 +208,13 @@ def write_parse_eval(filename, words, parse_heads, sent_lens, parse_labels, pos_
 
 
 def write_srl_debug(filename, words, predicates, sent_lens, role_labels, pos_predictions, pos_targets):
-  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.write_srl_debug({filename},...)")
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.write_srl_debug({filename}, {words}, {predicates}, {sent_lens}, {role_labels}, {pos_predictions}, {pos_targets})")
   with open(filename, 'w') as f:
     role_labels_start_idx = 0
     num_predicates_per_sent = np.sum(predicates, -1)
     # for each sentence in the batch
+    if not pos_targets:
+      pos_targets = pos_predictions
     for sent_words, sent_predicates, sent_len, sent_num_predicates, pos_preds, pos_targs in zip(words, predicates, sent_lens,
                                                                           num_predicates_per_sent, pos_predictions,
                                                                           pos_targets):
