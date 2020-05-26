@@ -253,7 +253,7 @@ def conll_srl_decoder(srl_predictions, predicate_predictions, words, mask, srl_t
   sent_lens = np.sum(mask, -1).astype(np.int32)
 
   # import time
-  debug_fname = pred_srl_eval_file.decode('utf-8') + str(time.time())
+  debug_fname = pred_srl_eval_file + str(time.time())
   write_srl_debug(debug_fname, words, predicate_targets, sent_lens, srl_targets, pos_predictions, pos_targets)
 
   return 0, 0, 0
