@@ -434,6 +434,21 @@ def conll_srl_np(predictions, targets, predicate_predictions, words, mask, predi
   return f1
 
 
+def conll_srl_decoder_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
+                   gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, accumulator):
+  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_srl_decoder_np")
+
+  # first, use reverse maps to convert ints to strings
+  str_srl_predictions = [list(map(reverse_maps['srl'].get, s)) for s in predictions]
+  str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
+  str_srl_targets = [list(map(reverse_maps['srl'].get, s)) for s in targets]
+
+  correct, excess, missed = conll_srl_decoder(str_srl_predictions, predicate_predictions, str_words, mask, str_srl_targets,
+                                           predicate_targets, pred_srl_eval_file, gold_srl_eval_file)
+
+  return 0
+
+
 def conll_srl_eval_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
                    gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, accumulator):
   tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_srl_eval_np")
@@ -512,7 +527,7 @@ def conll_parse_eval_np(predictions, targets, parse_head_predictions, words, mas
 
 fn_dispatcher = {
   'accuracy': accuracy_np,
-  'conll_srl_decoder': conll_srl_decoder,
+  'conll_srl_decoder': conll_srl_decoder_np,
   'conll_srl': conll_srl_np,
   'conll_srl_eval': conll_srl_eval_np,
   'conll_parse_eval': conll_parse_eval_np,
@@ -558,7 +573,7 @@ def get_accumulators(task_config):
 
 def get_params(task, task_map, predictions, features, labels, reverse_maps, tokens_to_keep):
   # always pass through predictions, targets and mask
-  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.get_params")
+  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.get_params({task})")
   params = {'predictions': predictions['%s_predictions' % task], 'targets': labels[task], 'mask': tokens_to_keep}
   if 'params' in task_map:
     params_map = task_map['params']
