@@ -144,6 +144,7 @@ def conll_parse_eval_tf(predictions, targets, parse_head_predictions, words, mas
 
 dispatcher = {
   'accuracy': accuracy_tf,
+  'conll_srl_decoder': conll_srl_eval_tf,
   'conll_srl': conll_srl_eval_tf,
   'conll_srl_eval': conll_srl_eval_tf,
   'conll_parse_eval': conll_parse_eval_tf,
