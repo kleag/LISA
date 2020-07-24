@@ -424,7 +424,7 @@ def conll_srl_np(predictions, targets, predicate_predictions, words, mask, predi
   str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
   str_srl_targets = [list(map(reverse_maps['srl'].get, s)) for s in targets]
 
-  correct, excess, missed = conll_srl(str_srl_predictions, predicate_predictions, str_words, mask, str_srl_targets,
+  correct, excess, missed = conll_srl_eval(str_srl_predictions, predicate_predictions, str_words, mask, str_srl_targets,
                                            predicate_targets, pred_srl_eval_file, gold_srl_eval_file)
 
   accumulator['correct'] += correct
