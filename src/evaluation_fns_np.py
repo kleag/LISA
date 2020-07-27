@@ -38,7 +38,8 @@ def convert_bilou(bio_predicted_roles):
         props_str = ''
       elif bilou == 'U':
         # need to check whether last one was ended
-        props_str = '(' + label_type + ('*)' if idx == len(label_parts) - 1 else "")
+        props_str = ('(' + label_type + ('*)'
+            if idx == len(label_parts) - 1 else ""))
       elif bilou == 'B':
         # need to check whether last one was ended
         props_str = '(' + label_type
@@ -199,68 +200,92 @@ def write_parse_eval(filename, words, parse_heads, sent_lens, parse_labels, pos_
                                                                                         parse_labels, pos_tags):
       # for each token in the sentence
       for j, (word, parse_head, parse_label, pos_tag) in enumerate(zip(sent_words[:sent_len],
-                                                                       sent_parse_heads[:sent_len],
-                                                                       sent_parse_labels[:sent_len],
-                                                                       sent_pos_tags[:sent_len])):
+                    sent_parse_heads[:sent_len],
+                    sent_parse_labels[:sent_len],
+                    sent_pos_tags[:sent_len])):
         parse_head = 0 if j == parse_head else parse_head + 1
-        print("%d\t%s\t_\t%s\t_\t_\t%d\t%s" % (j, word, pos_tag, int(parse_head), parse_label), file=f)
-      print(file=f)
+        print("%d\t%s\t_\t%s\t_\t_\t%d\t%s" % (j, word, pos_tag,
+                                               int(parse_head),
+                                               parse_label), file=f)
+    print(file=f)
 
 
-def write_srl_debug(filename, words, predicates, sent_lens, role_labels, pos_predictions, pos_targets):
-  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.write_srl_debug({filename}, {words}, {predicates}, {sent_lens}, {role_labels}, {pos_predictions}, {pos_targets})")
+def write_srl_debug(filename, words, predicates, sent_lens, role_labels,
+                    pos_predictions, pos_targets):
+  tf.logging.log(tf.logging.INFO,
+                 (f"evaluation_fns_np.write_srl_debug({filename}, {words}, ",
+                     f"{predicates}, {sent_lens}, {role_labels}, ",
+                         f"{pos_predictions}, {pos_targets})"))
   with open(filename, 'w') as f:
     role_labels_start_idx = 0
     num_predicates_per_sent = np.sum(predicates, -1)
     # for each sentence in the batch
+    if not pos_predictions:
+        pos_predictions = ['_' for w in words]
     if not pos_targets:
       pos_targets = pos_predictions
-    for sent_words, sent_predicates, sent_len, sent_num_predicates, pos_preds, pos_targs in zip(words, predicates, sent_lens,
-                                                                          num_predicates_per_sent, pos_predictions,
-                                                                          pos_targets):
+    for (sent_words,
+         sent_predicates,
+         sent_len,
+         sent_num_predicates,
+         pos_preds,
+         pos_targs) in zip(words, predicates, sent_lens, num_predicates_per_sent,
+                         pos_predictions, pos_targets):
       # grab predicates and convert to conll format from bio
       # this is a sent_num_predicates x batch_seq_len array
       sent_role_labels_bio = role_labels[role_labels_start_idx: role_labels_start_idx + sent_num_predicates]
 
       # this is a list of sent_num_predicates lists of srl role labels
-      sent_role_labels = list(map(list, zip(*[convert_bilou(j[:sent_len]) for j in sent_role_labels_bio])))
+      sent_role_labels = list(map(list,
+                                  zip(*[convert_bilou(j[:sent_len]) for j in sent_role_labels_bio])))
       role_labels_start_idx += sent_num_predicates
 
       sent_role_labels_bio = list(zip(*sent_role_labels_bio))
 
-      pos_preds = list(map(lambda d: d.decode('utf-8'), pos_preds))
-      pos_targs = list(map(lambda d: d.decode('utf-8'), pos_targs))
+      #pos_preds = list(map(lambda d: d.decode('utf-8'), pos_preds))
+      #pos_targs = list(map(lambda d: d.decode('utf-8'), pos_targs))
 
       # for each token in the sentence
       # printed = False
-      for j, (word, predicate, pos_p, pos_t) in enumerate(zip(sent_words[:sent_len], sent_predicates[:sent_len],
-                                                              pos_preds[:sent_len], pos_targs[:sent_len])):
+      for j, (word, predicate, pos_p, pos_t) in enumerate(zip(sent_words[:sent_len],
+                    sent_predicates[:sent_len],
+                    pos_preds[:sent_len], pos_targs[:sent_len])):
         tok_role_labels = sent_role_labels[j] if sent_role_labels else []
         bio_tok_role_labels = sent_role_labels_bio[j][:sent_len] if sent_role_labels else []
-        word_str = word.decode('utf-8')
+        #word_str = word.decode('utf-8')
+        word_str = word
         predicate_str = str(predicate)
         roles_str = '\t'.join(tok_role_labels)
-        bio_roles_str = '\t'.join(map(lambda d: d.decode('utf-8'), bio_tok_role_labels))
-        print("%s\t%s\t%s\t%s\t%s\t%s" % (word_str, predicate_str, pos_t, pos_p, roles_str, bio_roles_str), file=f)
+        #bio_roles_str = '\t'.join(map(lambda d: d.decode('utf-8'), bio_tok_role_labels))
+        bio_roles_str = '\t'.join(map(lambda d: d, bio_tok_role_labels))
+        print("%s\t%s\t%s\t%s\t%s\t%s" % (word_str, predicate_str,
+                                          pos_t, pos_p, roles_str,
+                                          bio_roles_str), file=f)
       print(file=f)
 
 
-def conll_srl_decoder(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
+def conll_srl_decoder(srl_predictions, predicate_predictions, words, mask,
+                      srl_targets, predicate_targets,
                       pred_srl_eval_file, gold_srl_eval_file, pos_predictions=None, pos_targets=None):
-  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.conll_srl_decoder: {pred_srl_eval_file}")
+    tf.logging.log(tf.logging.INFO,
+                   (f"evaluation_fns_np.conll_srl_decoder: {pred_srl_eval_file}",
+                    f"{words}, {mask}, {srl_targets}, {predicate_targets}, ",
+                    f"{pred_srl_eval_file}, ",
+                    f"{pos_predictions}, {pos_targets}"))
 
-  # predictions: num_predicates_in_batch x batch_seq_len tensor of ints
-  # predicate predictions: batch_size x batch_seq_len [ x 1?] tensor of ints (0/1)
-  # words: batch_size x batch_seq_len tensor of ints (0/1)
+    # predictions: num_predicates_in_batch x batch_seq_len tensor of ints
+    # predicate predictions: batch_size x batch_seq_len [ x 1?] tensor of ints (0/1)
+    # words: batch_size x batch_seq_len tensor of ints (0/1)
 
-  # need to print for every word in every sentence
-  sent_lens = np.sum(mask, -1).astype(np.int32)
+    # need to print for every word in every sentence
+    sent_lens = np.sum(mask, -1).astype(np.int32)
 
-  # import time
-  debug_fname = pred_srl_eval_file + str(time.time())
-  write_srl_debug(debug_fname, words, predicate_targets, sent_lens, srl_targets, pos_predictions, pos_targets)
+    # import time
+    debug_fname = pred_srl_eval_file + str(time.time())
+    write_srl_debug(debug_fname, words, predicate_targets, sent_lens,
+                    srl_targets, pos_predictions, pos_targets)
 
-  return 0, 0, 0
+    return 0, 0, 0
 
 
 def conll_srl_eval(srl_predictions, predicate_predictions, words, mask, srl_targets, predicate_targets,
@@ -438,31 +463,54 @@ def conll_srl_np(predictions, targets, predicate_predictions, words, mask, predi
   return f1
 
 
-def conll_srl_decoder_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
-                   gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, accumulator):
-  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_srl_decoder_np")
+def conll_srl_decoder_np(predictions, targets, predicate_predictions, words,
+                         mask, predicate_targets, reverse_maps,
+                         gold_srl_eval_file, pred_srl_eval_file,
+                         pos_predictions, pos_targets, accumulator):
+    tf.logging.log(tf.logging.INFO,
+                   (f"""evaluation_fns_np.conll_srl_decoder_np(
+        predictions:{predictions},
+        targets: {targets},
+        predicate_predictions: {predicate_predictions},
+        words: {words},
+        mask: {mask},
+        predicate_targets: {predicate_targets},
+        gold_srl_eval_file: {gold_srl_eval_file},
+        pred_srl_eval_file: {pred_srl_eval_file},
+        pos_predictions: {pos_predictions},
+        pos_targets: {pos_targets})"""))
 
-  # first, use reverse maps to convert ints to strings
-  str_srl_predictions = [list(map(reverse_maps['srl'].get, s)) for s in predictions]
-  str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
-  str_srl_targets = [list(map(reverse_maps['srl'].get, s)) for s in targets]
+    # first, use reverse maps to convert ints to strings
+    str_srl_predictions = [list(map(reverse_maps['srl'].get,
+                                    s)) for s in predictions]
+    str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
+    str_srl_targets = [list(map(reverse_maps['srl'].get, s)) for s in targets]
 
-  correct, excess, missed = conll_srl_decoder(str_srl_predictions, predicate_predictions, str_words, mask, str_srl_targets,
-                                           predicate_targets, pred_srl_eval_file, gold_srl_eval_file)
+    correct, excess, missed = conll_srl_decoder(str_srl_predictions,
+                                                predicate_predictions, str_words,
+                                                mask, str_srl_targets,
+                                                predicate_targets,
+                                                pred_srl_eval_file,
+                                                gold_srl_eval_file)
 
-  return 0
+    return 0
 
 
-def conll_srl_eval_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
-                   gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, accumulator):
+def conll_srl_eval_np(predictions, targets, predicate_predictions, words, mask,
+                      predicate_targets, reverse_maps,
+                      gold_srl_eval_file, pred_srl_eval_file, pos_predictions,
+                      pos_targets, accumulator):
   tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_srl_eval_np")
 
   # first, use reverse maps to convert ints to strings
-  str_srl_predictions = [list(map(reverse_maps['srl'].get, s)) for s in predictions]
+  str_srl_predictions = [list(map(reverse_maps['srl'].get,
+                                  s)) for s in predictions]
   str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
   str_srl_targets = [list(map(reverse_maps['srl'].get, s)) for s in targets]
 
-  correct, excess, missed = conll_srl_eval(str_srl_predictions, predicate_predictions, str_words, mask, str_srl_targets,
+  correct, excess, missed = conll_srl_eval(str_srl_predictions,
+                                           predicate_predictions, str_words,
+                                           mask, str_srl_targets,
                                            predicate_targets, pred_srl_eval_file, gold_srl_eval_file)
 
   accumulator['correct'] += correct
@@ -476,26 +524,44 @@ def conll_srl_eval_np(predictions, targets, predicate_predictions, words, mask, 
   return f1
 
 
-def conll09_srl_eval_np(predictions, targets, predicate_predictions, words, mask, predicate_targets, reverse_maps,
-                        gold_srl_eval_file, pred_srl_eval_file, pos_predictions, pos_targets, parse_head_predictions,
+def conll09_srl_eval_np(predictions, targets, predicate_predictions, words,
+                        mask, predicate_targets, reverse_maps,
+                        gold_srl_eval_file, pred_srl_eval_file,
+                        pos_predictions, pos_targets, parse_head_predictions,
                         parse_head_targets, parse_label_predictions, parse_label_targets, accumulator):
   tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll09_srl_eval_np")
 
   # first, use reverse maps to convert ints to strings
-  str_srl_predictions = [list(map(reverse_maps['srl'].get, s)) for s in predictions]
+  str_srl_predictions = [list(map(reverse_maps['srl'].get,
+                                  s)) for s in predictions]
   str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
   str_srl_targets = [list(map(reverse_maps['srl'].get, s)) for s in targets]
-  str_pos_targets = [list(map(reverse_maps['gold_pos'].get, s)) for s in pos_targets]
-  str_pos_predictions = [list(map(reverse_maps['gold_pos'].get, s)) for s in pos_predictions]
-  str_parse_label_targets = [list(map(reverse_maps['parse_label'].get, s)) for s in parse_label_targets]
-  str_parse_label_predictions = [list(map(reverse_maps['parse_label'].get, s)) for s in parse_label_predictions]
-  str_predicate_predictions = [list(map(reverse_maps['predicate'].get, s)) for s in predicate_predictions]
-  str_predicate_targets = [list(map(reverse_maps['predicate'].get, s)) for s in predicate_targets]
+  str_pos_targets = [list(map(reverse_maps['gold_pos'].get,
+                              s)) for s in pos_targets]
+  str_pos_predictions = [list(map(reverse_maps['gold_pos'].get,
+                                  s)) for s in pos_predictions]
+  str_parse_label_targets = [list(map(reverse_maps['parse_label'].get,
+                                      s)) for s in parse_label_targets]
+  str_parse_label_predictions = [list(map(reverse_maps['parse_label'].get,
+                                          s)) for s in parse_label_predictions]
+  str_predicate_predictions = [list(map(reverse_maps['predicate'].get,
+                                        s)) for s in predicate_predictions]
+  str_predicate_targets = [list(map(reverse_maps['predicate'].get,
+                                    s)) for s in predicate_targets]
 
-  correct, excess, missed = conll09_srl_eval(str_srl_predictions, str_predicate_predictions, str_words, mask,
-                                             str_srl_targets, str_predicate_targets, str_parse_label_predictions,
-                                             parse_head_predictions, str_parse_label_targets, parse_head_targets,
-                                             str_pos_targets, str_pos_predictions, pred_srl_eval_file, gold_srl_eval_file)
+  correct, excess, missed = conll09_srl_eval(str_srl_predictions,
+                                             str_predicate_predictions,
+                                             str_words, mask,
+                                             str_srl_targets,
+                                             str_predicate_targets,
+                                             str_parse_label_predictions,
+                                             parse_head_predictions,
+                                             str_parse_label_targets,
+                                             parse_head_targets,
+                                             str_pos_targets,
+                                             str_pos_predictions,
+                                             pred_srl_eval_file,
+                                             gold_srl_eval_file)
 
   accumulator['correct'] += correct
   accumulator['excess'] += excess
@@ -508,18 +574,25 @@ def conll09_srl_eval_np(predictions, targets, predicate_predictions, words, mask
   return f1
 
 
-def conll_parse_eval_np(predictions, targets, parse_head_predictions, words, mask, parse_head_targets, reverse_maps,
-                        gold_parse_eval_file, pred_parse_eval_file, pos_targets, accumulator):
+def conll_parse_eval_np(predictions, targets, parse_head_predictions, words,
+                        mask, parse_head_targets, reverse_maps,
+                        gold_parse_eval_file, pred_parse_eval_file,
+                        pos_targets, accumulator):
   tf.logging.log(tf.logging.INFO, "evaluation_fns_np.conll_parse_eval_np")
 
   # first, use reverse maps to convert ints to strings
   str_words = [list(map(reverse_maps['word'].get, s)) for s in words]
-  str_predictions = [list(map(reverse_maps['parse_label'].get, s)) for s in predictions]
-  str_targets = [list(map(reverse_maps['parse_label'].get, s)) for s in targets]
-  str_pos_targets = [list(map(reverse_maps['gold_pos'].get, s)) for s in pos_targets]
+  str_predictions = [list(map(reverse_maps['parse_label'].get,
+                              s)) for s in predictions]
+  str_targets = [list(map(reverse_maps['parse_label'].get,
+                          s)) for s in targets]
+  str_pos_targets = [list(map(reverse_maps['gold_pos'].get,
+                              s)) for s in pos_targets]
 
-  total, corrects = conll_parse_eval(str_predictions, parse_head_predictions, str_words, mask, str_targets,
-                                     parse_head_targets, pred_parse_eval_file, gold_parse_eval_file, str_pos_targets)
+  total, corrects = conll_parse_eval(str_predictions, parse_head_predictions,
+                                     str_words, mask, str_targets,
+                                     parse_head_targets, pred_parse_eval_file,
+                                     gold_parse_eval_file, str_pos_targets)
 
   accumulator['total'] += total
   accumulator['corrects'] += corrects
@@ -550,46 +623,56 @@ accumulator_factory = {
 
 
 def dispatch(fn_name):
-  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.dispatch({fn_name})")
-  try:
-    return fn_dispatcher[fn_name]
-  except KeyError:
-    util.fatal_error('dispatch: Undefined evaluation function `%s' % fn_name)
+    try:
+        tf.logging.log(tf.logging.INFO,
+                    f"evaluation_fns_np.dispatch({fn_name}) => "
+                    f" {fn_dispatcher[fn_name]}")
+        return fn_dispatcher[fn_name]
+    except KeyError:
+        util.fatal_error(f"evaluation_fns_np.dispatch: "
+                         f"Undefined evaluation function '{fn_name}'")
 
 
 def get_accumulator(fn_name):
-  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.get_accumulator({fn_name})")
-  try:
-    return accumulator_factory[fn_name]()
-  except KeyError:
-    util.fatal_error('get_accumulator: Undefined evaluation function `%s' % fn_name)
+    try:
+        tf.logging.log(tf.logging.INFO,
+                       f"evaluation_fns_np.get_accumulator({fn_name}) => "
+                       f"{accumulator_factory[fn_name]}")
+        return accumulator_factory[fn_name]()
+    except KeyError:
+        util.fatal_error((f"get_accumulator: Undefined evaluation function ",
+                          f"'{fn_name}'"))
 
 
 def get_accumulators(task_config):
-  tf.logging.log(tf.logging.INFO, "evaluation_fns_np.get_accumulators")
-  eval_accumulators = {}
-  # for i in layer_task_config:
-  for task, task_map in task_config.items():
-    for eval_name, eval_map in task_map['eval_fns'].items():
-      eval_accumulators[eval_name] = get_accumulator(eval_map['name'])
-  return eval_accumulators
+    tf.logging.log(tf.logging.INFO, "evaluation_fns_np.get_accumulators")
+    eval_accumulators = {}
+    # for i in layer_task_config:
+    for task, task_map in task_config.items():
+        for eval_name, eval_map in task_map['eval_fns'].items():
+            eval_accumulators[eval_name] = get_accumulator(eval_map['name'])
+    return eval_accumulators
 
 
 def get_params(task, task_map, predictions, features, labels, reverse_maps, tokens_to_keep):
   # always pass through predictions, targets and mask
   tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.get_params({task})")
-  params = {'predictions': predictions['%s_predictions' % task], 'targets': labels[task], 'mask': tokens_to_keep}
+  params = {'predictions': predictions['%s_predictions' % task],
+            'targets': labels[task],
+            'mask': tokens_to_keep}
   if 'params' in task_map:
     params_map = task_map['params']
     for param_name, param_values in params_map.items():
       if 'reverse_maps' in param_values:
-        params[param_name] = {map_name: reverse_maps[map_name] for map_name in param_values['reverse_maps']}
+        params[param_name] = {
+            map_name: reverse_maps[map_name] for map_name in param_values['reverse_maps']}
       elif 'label' in param_values:
         params[param_name] = labels[param_values['label']]
       elif 'feature' in param_values:
         params[param_name] = features[param_values['feature']]
       elif 'layer' in param_values:
-        params[param_name] = predictions['%s_%s' % (param_values['layer'], param_values['output'])]
+        params[param_name] = predictions[
+            f"{param_values['layer']}_{param_values['output']}"]
       else:
         params[param_name] = param_values['value']
   return params
