@@ -3,6 +3,10 @@
     "penalty": 1.0,
     "viterbi": true,
     "transition_stats": "##transition_stats##",
+    "token_take_mask": {
+      "layer": "joint_pos_predicate",
+      "output": "predicate_predictions"
+    },
     "output_fn": {
       "name": "srl_bilinear",
       "params": {
@@ -13,7 +17,8 @@
           "label": "predicate"
         },
         "predicate_preds_eval": {
-          "label": "predicate"
+          "layer": "joint_pos_predicate",
+          "output": "predicate_predictions"
         }
       }
     },
@@ -45,10 +50,12 @@
             "feature": "word"
           },
           "predicate_predictions": {
-            "label": "predicate"
+            "layer": "joint_pos_predicate",
+            "output": "predicate_predictions"
           },
           "pos_predictions": {
-            "label": "gold_pos"
+            "layer": "joint_pos_predicate",
+            "output": "gold_pos_predictions"
           },
           "pos_targets": {
             "label": "gold_pos"

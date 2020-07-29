@@ -5,66 +5,69 @@ import sys
 
 
 def fatal_error(message):
-  tf.logging.log(tf.logging.ERROR, message)
-  sys.exit(1)
+    tf.logging.log(tf.logging.ERROR, message)
+    sys.exit(1)
 
 
 def init_logging(verbosity):
-  tf.logging.set_verbosity(verbosity)
-  tf.logging.log(tf.logging.INFO, "Using Python version %s" % sys.version)
-  tf.logging.log(tf.logging.INFO, "Using TensorFlow version %s" % tf.__version__)
+    tf.logging.set_verbosity(verbosity)
+    tf.logging.log(tf.logging.INFO, "Using Python version %s" % sys.version)
+    tf.logging.log(tf.logging.INFO, "Using TensorFlow version %s" % tf.__version__)
 
 
 def batch_str_decode(string_array, codec='utf-8'):
-  string_array = np.array(string_array)
-  return np.reshape(np.array(list(map(lambda p: p if not p or isinstance(p, str) else p.decode(codec),
-                             np.reshape(string_array, [-1])))), string_array.shape)
+    string_array = np.array(string_array)
+    return np.reshape(np.array(list(map(lambda p: p if not p or isinstance(p, str) else p.decode(codec),
+                                np.reshape(string_array, [-1])))), string_array.shape)
 
 
 def sequence_mask_np(lengths, maxlen=None):
-  if not maxlen:
-    maxlen = np.max(lengths)
-  return np.arange(maxlen) < np.array(lengths)[:, None]
+    if not maxlen:
+        maxlen = np.max(lengths)
+    return np.arange(maxlen) < np.array(lengths)[:, None]
 
 
 def get_immediate_subdirectories(a_dir):
-  return [name for name in os.listdir(a_dir) if os.path.isdir(os.path.join(a_dir, name))]
+    return [
+        name for name in os.listdir(a_dir) if os.path.isdir(
+            os.path.join(a_dir, name))]
 
 
 def load_transitions(transition_statistics, num_classes, vocab_map):
-  transition_statistics_np = np.zeros((num_classes, num_classes))
-  with open(transition_statistics, 'r') as f:
-    for line in f:
-      tag1, tag2, prob = line.split("\t")
-      transition_statistics_np[vocab_map[tag1], vocab_map[tag2]] = float(prob)
-  tf.logging.log(tf.logging.INFO, "Loaded pre-computed transition statistics: %s" % transition_statistics)
-  return transition_statistics_np
+    transition_statistics_np = np.zeros((num_classes, num_classes))
+    with open(transition_statistics, 'r') as f:
+        for line in f:
+            tag1, tag2, prob = line.split("\t")
+            transition_statistics_np[vocab_map[tag1], vocab_map[tag2]] = float(prob)
+    tf.logging.log(tf.logging.INFO,
+                   "Loaded pre-computed transition statistics: %s" % transition_statistics)
+    return transition_statistics_np
 
 
 def load_pretrained_embeddings(pretrained_fname):
-  tf.logging.log(tf.logging.INFO, "Loading pre-trained embedding file: %s" % pretrained_fname)
+    tf.logging.log(tf.logging.INFO, "Loading pre-trained embedding file: %s" % pretrained_fname)
 
-  # TODO: np.loadtxt refuses to work for some reason
-  # pretrained_embeddings = np.loadtxt(self.args.word_embedding_file, usecols=range(1, word_embedding_size+1))
-  pretrained_embeddings = []
-  with open(pretrained_fname, 'r') as f:
-    for line in f:
-      split_line = line.split()
-      embedding = list(map(float, split_line[1:]))
-      pretrained_embeddings.append(embedding)
-  pretrained_embeddings = np.array(pretrained_embeddings)
-  pretrained_embeddings /= np.std(pretrained_embeddings)
-  return pretrained_embeddings
+    # TODO: np.loadtxt refuses to work for some reason
+    # pretrained_embeddings = np.loadtxt(self.args.word_embedding_file, usecols=range(1, word_embedding_size+1))
+    pretrained_embeddings = []
+    with open(pretrained_fname, 'r') as f:
+        for line in f:
+            split_line = line.split()
+            embedding = list(map(float, split_line[1:]))
+            pretrained_embeddings.append(embedding)
+    pretrained_embeddings = np.array(pretrained_embeddings)
+    pretrained_embeddings /= np.std(pretrained_embeddings)
+    return pretrained_embeddings
 
 
 def get_token_take_mask(task, task_config, outputs):
-  task_map = task_config[task]
-  token_take_mask = None
-  if "token_take_mask" in task_map:
-    token_take_conf = task_map["token_take_mask"]
-    token_take_mask = outputs["%s_%s" % (token_take_conf["layer"], token_take_conf["output"])]
+    task_map = task_config[task]
+    token_take_mask = None
+    if "token_take_mask" in task_map:
+        token_take_conf = task_map["token_take_mask"]
+        token_take_mask = outputs["%s_%s" % (token_take_conf["layer"], token_take_conf["output"])]
 
-  return token_take_mask
+    return token_take_mask
 
 
 def load_transition_params(task_config, vocab):

@@ -48,6 +48,10 @@ def get_data_iterator(data_filenames, data_config, vocab_lookup_ops,
                       batch_size, num_epochs, shuffle,
                       shuffle_buffer_multiplier):
 
+    tf.logging.log(
+        tf.logging.INFO,
+        f"dataset.get_data_iterator: {data_filenames}, {data_config}, "
+        f"{vocab_lookup_ops}, {batch_size}, {num_epochs}, {shuffle}")
     bucket_boundaries = constants.DEFAULT_BUCKET_BOUNDARIES
     bucket_batch_sizes = [batch_size] * (len(bucket_boundaries) + 1)
 
@@ -62,6 +66,9 @@ def get_data_iterator(data_filenames, data_config, vocab_lookup_ops,
                              and data_config[d]['feature'])
                             or ('label' in data_config[d]
                                 and data_config[d]['label']))]
+        tf.logging.log(
+            tf.logging.INFO,
+            f"dataset.get_data_iterator: feature_label_names: {feature_label_names}")
 
         # get the dataset
         dataset = tf.data.Dataset.from_generator(

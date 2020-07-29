@@ -141,8 +141,10 @@ def write_srl_eval(filename, words, predicates, sent_lens, role_labels):
 # 1	economy	_	_	NOUN	NOUN	_	_	4	4	nmod:poss	nmod:poss	_	_	A1	_	_	_
 # 2	's	_	_	PART	PART	_	_	2	2	case	case	_	_	_	_	_	_
 # 3	temperature	_	_	NOUN	NOUN	_	_	7	7	nsubjpass	nsubjpass	Y	temperature.01	A2	A1	_	_
-def write_srl_eval_09(filename, words, predicates, sent_lens, role_labels, parse_heads, parse_labels, pos_tags):
-  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.write_srl_eval_09({filename})")
+def write_srl_eval_09(filename, words, predicates, sent_lens, role_labels,
+                      parse_heads, parse_labels, pos_tags):
+  tf.logging.log(tf.logging.INFO,
+                 f"evaluation_fns_np.write_srl_eval_09({filename})")
   with open(filename, 'w') as f:
     role_labels_start_idx = 0
 
@@ -156,27 +158,36 @@ def write_srl_eval_09(filename, words, predicates, sent_lens, role_labels, parse
     num_predicates_per_sent = np.sum(predicates != '_', -1)
 
     # for each sentence in the batch
-    for sent_words, sent_predicates, sent_len, sent_num_predicates, \
-        sent_parse_heads, sent_parse_labels, sent_pos_tags in zip(words, predicates, sent_lens, num_predicates_per_sent,
-                                                                  parse_heads, parse_labels, pos_tags):
+    for (sent_words, sent_predicates, sent_len, sent_num_predicates,
+         sent_parse_heads, sent_parse_labels, sent_pos_tags) in zip(
+             words, predicates, sent_lens, num_predicates_per_sent,
+             parse_heads, parse_labels, pos_tags):
       # grab predicates and convert to conll format from bio
       # this is a sent_num_predicates x batch_seq_len array
-      sent_role_labels = np.transpose(role_labels[role_labels_start_idx: role_labels_start_idx + sent_num_predicates])
+      sent_role_labels = np.transpose(
+          role_labels[
+              role_labels_start_idx:
+                  (role_labels_start_idx + sent_num_predicates)])
 
       # this is a list of sent_num_predicates lists of srl role labels
       role_labels_start_idx += sent_num_predicates
 
       # for each token in the sentence
-      for j, (word, predicate, parse_head, parse_label, pos_tag) in enumerate(zip(sent_words[:sent_len],
-                                                                                  sent_predicates[:sent_len],
-                                                                                  sent_parse_heads[:sent_len],
-                                                                                  sent_parse_labels[:sent_len],
-                                                                                  sent_pos_tags[:sent_len])):
-        tok_role_labels = sent_role_labels[j] if len(sent_role_labels) > 0 else []
-        predicate_str = "Y\t%s:%s" % (word, predicate) if predicate != "_" else '_\t_'
+      for j, (word, predicate, parse_head, parse_label, pos_tag) in enumerate(
+          zip(sent_words[:sent_len],
+              sent_predicates[:sent_len],
+              sent_parse_heads[:sent_len],
+              sent_parse_labels[:sent_len],
+              sent_pos_tags[:sent_len])):
+        tok_role_labels = (sent_role_labels[j]
+                           if len(sent_role_labels) > 0 else [])
+        predicate_str = ("Y\t%s:%s" % (word, predicate)
+                         if predicate != "_" else '_\t_')
         roles_str = '\t'.join(tok_role_labels)
-        outputs = (j, word, pos_tag, pos_tag, parse_head, parse_head, parse_label, parse_label, predicate_str, roles_str)
-        print("%s\t%s\t_\t_\t%s\t%s\t_\t_\t%s\t%s\t%s\t%s\t%s\t%s" % outputs, file=f)
+        print(f"{j}\t{word}\t_\t_\t{pos_tag}\t{pos_tag}\t_\t_\t"
+              f"{parse_head}\t{parse_head}\t{parse_label}\t{parse_label}\t"
+              f"{predicate_str}\t{roles_str}",
+              file=f)
       print(file=f)
 
 
@@ -212,66 +223,99 @@ def write_parse_eval(filename, words, parse_heads, sent_lens, parse_labels, pos_
 
 def write_srl_debug(filename, words, predicates, sent_lens, role_labels,
                     pos_predictions, pos_targets):
-  tf.logging.log(tf.logging.INFO,
-                 (f"evaluation_fns_np.write_srl_debug({filename}, {words}, ",
-                     f"{predicates}, {sent_lens}, {role_labels}, ",
-                         f"{pos_predictions}, {pos_targets})"))
-  with open(filename, 'w') as f:
-    role_labels_start_idx = 0
-    num_predicates_per_sent = np.sum(predicates, -1)
-    # for each sentence in the batch
-    if not pos_predictions:
-        pos_predictions = ['_' for w in words]
-    if not pos_targets:
-      pos_targets = pos_predictions
-    for (sent_words,
-         sent_predicates,
-         sent_len,
-         sent_num_predicates,
-         pos_preds,
-         pos_targs) in zip(words, predicates, sent_lens, num_predicates_per_sent,
-                         pos_predictions, pos_targets):
-      # grab predicates and convert to conll format from bio
-      # this is a sent_num_predicates x batch_seq_len array
-      sent_role_labels_bio = role_labels[role_labels_start_idx: role_labels_start_idx + sent_num_predicates]
+    tf.logging.log(
+        tf.logging.INFO,
+        f"evaluation_fns_np.write_srl_debug({filename}, "
+        f"words: {words}, predicates: {predicates}, sent_lens: {sent_lens}, "
+        f"role_labels: {role_labels}, pos_predictions: {pos_predictions}, "
+        f"pos_targets: {pos_targets})")
+    with open(filename, 'w') as output_file:
+        role_labels_start_idx = 0
+        num_predicates_per_sent = np.sum(predicates, -1)
+        # for each sentence in the batch
+        if not pos_predictions:
+            pos_predictions = []
+            for sent in words:
+                sent_pos_predictions = ['_' for w in sent]
+                pos_predictions.append(sent_pos_predictions)
+        if not pos_targets:
+            pos_targets = pos_predictions
+        for (sent_words, sent_predicates, sent_len, sent_num_predicates,
+             pos_preds, pos_targs) in zip(
+                 words, predicates, sent_lens, num_predicates_per_sent,
+                 pos_predictions, pos_targets):
+            tf.logging.log(
+                tf.logging.INFO,
+                f"evaluation_fns_np.write_srl_debug handling a sentence "
+                f"sent_words: {sent_words}, "
+                f"sent_predicates: {sent_predicates}, sent_len: {sent_len}, "
+                f"sent_num_predicates: {sent_num_predicates}, "
+                f"pos_preds: {pos_preds}, pos_targs: {pos_targs}")
+            # grab predicates and convert to conll format from bio
+            # this is a sent_num_predicates x batch_seq_len array
+            sent_role_labels_bio = role_labels[role_labels_start_idx:     role_labels_start_idx + sent_num_predicates]
+            tf.logging.log(
+                tf.logging.INFO,
+                f"evaluation_fns_np.write_srl_debug sent_role_labels_bio: "
+                f"{sent_role_labels_bio}")
 
-      # this is a list of sent_num_predicates lists of srl role labels
-      sent_role_labels = list(map(list,
-                                  zip(*[convert_bilou(j[:sent_len]) for j in sent_role_labels_bio])))
-      role_labels_start_idx += sent_num_predicates
+            # this is a list of sent_num_predicates lists of srl role labels
+            sent_role_labels = list(map(list,
+                                    zip(*[convert_bilou(j[:sent_len]) for j in sent_role_labels_bio])))
+            tf.logging.log(
+                tf.logging.INFO,
+                f"evaluation_fns_np.write_srl_debug sent_role_labels: "
+                f"{sent_role_labels}")
+            role_labels_start_idx += sent_num_predicates
 
-      sent_role_labels_bio = list(zip(*sent_role_labels_bio))
+            sent_role_labels_bio = list(zip(*sent_role_labels_bio))
+            tf.logging.log(
+                tf.logging.INFO,
+                f"evaluation_fns_np.write_srl_debug sent_role_labels_bio: "
+                f"{sent_role_labels_bio}")
 
-      #pos_preds = list(map(lambda d: d.decode('utf-8'), pos_preds))
-      #pos_targs = list(map(lambda d: d.decode('utf-8'), pos_targs))
+            #pos_preds = list(map(lambda d: d.decode('utf-8'), pos_preds))
+            #pos_targs = list(map(lambda d: d.decode('utf-8'), pos_targs))
 
-      # for each token in the sentence
-      # printed = False
-      for j, (word, predicate, pos_p, pos_t) in enumerate(zip(sent_words[:sent_len],
-                    sent_predicates[:sent_len],
+            # for each token in the sentence
+            # printed = False
+            for j, (word, predicate, pos_p, pos_t) in enumerate(
+                zip(sent_words[:sent_len], sent_predicates[:sent_len],
                     pos_preds[:sent_len], pos_targs[:sent_len])):
-        tok_role_labels = sent_role_labels[j] if sent_role_labels else []
-        bio_tok_role_labels = sent_role_labels_bio[j][:sent_len] if sent_role_labels else []
-        #word_str = word.decode('utf-8')
-        word_str = word
-        predicate_str = str(predicate)
-        roles_str = '\t'.join(tok_role_labels)
-        #bio_roles_str = '\t'.join(map(lambda d: d.decode('utf-8'), bio_tok_role_labels))
-        bio_roles_str = '\t'.join(map(lambda d: d, bio_tok_role_labels))
-        print("%s\t%s\t%s\t%s\t%s\t%s" % (word_str, predicate_str,
-                                          pos_t, pos_p, roles_str,
-                                          bio_roles_str), file=f)
-      print(file=f)
+                tf.logging.log(
+                    tf.logging.INFO,
+                    f"evaluation_fns_np.write_srl_debug handling word {j}: "
+                    f"word: {word}, "
+                    f"predicate: {predicate}, pos_p: {pos_p}, "
+                    f"post_t: {pos_t}")
+                tok_role_labels = (sent_role_labels[j]
+                                   if sent_role_labels else [])
+                bio_tok_role_labels = (sent_role_labels_bio[j][:sent_len]
+                                       if sent_role_labels else [])
+                word_str = word
+                predicate_str = str(predicate)
+                roles_str = '\t'.join(tok_role_labels)
+                #bio_roles_str = '\t'.join(map(lambda d: d.decode('utf-8'), bio_tok_role_labels))
+                bio_roles_str = '\t'.join(map(lambda d: d, bio_tok_role_labels))
+                print(f"{word_str}\t{predicate_str}\t{pos_t}\t{pos_p}\t"
+                      f"{roles_str}\t{bio_roles_str}",
+                      file=output_file)
+        print(file=output_file)
 
 
 def conll_srl_decoder(srl_predictions, predicate_predictions, words, mask,
                       srl_targets, predicate_targets,
                       pred_srl_eval_file, gold_srl_eval_file, pos_predictions=None, pos_targets=None):
     tf.logging.log(tf.logging.INFO,
-                   (f"evaluation_fns_np.conll_srl_decoder: {pred_srl_eval_file}",
-                    f"{words}, {mask}, {srl_targets}, {predicate_targets}, ",
-                    f"{pred_srl_eval_file}, ",
-                    f"{pos_predictions}, {pos_targets}"))
+                   f"""evaluation_fns_np.conll_srl_decoder:
+        pred_srl_eval_file: {pred_srl_eval_file},
+        srl_predictions: {srl_predictions},
+        predicate_targets: {predicate_targets},
+        words: {words}, \nmask: {mask},
+        srl_targets: {srl_targets},
+        predicate_targets: {predicate_targets},
+        pos_predictions: {pos_predictions},
+        pos_targets: {pos_targets}""")
 
     # predictions: num_predicates_in_batch x batch_seq_len tensor of ints
     # predicate predictions: batch_size x batch_seq_len [ x 1?] tensor of ints (0/1)
@@ -456,9 +500,9 @@ def conll_srl_np(predictions, targets, predicate_predictions, words, mask, predi
   accumulator['excess'] += excess
   accumulator['missed'] += missed
 
-  precision = accumulator['correct'] / (accumulator['correct'] + accumulator['excess'])
-  recall = accumulator['correct'] / (accumulator['correct'] + accumulator['missed'])
-  f1 = 2 * precision * recall / (precision + recall)
+  precision = accumulator['correct'] / (accumulator['correct'] + accumulator['excess']) if (accumulator['correct'] + accumulator['excess']) != 0 else 0
+  recall = accumulator['correct'] / (accumulator['correct'] + accumulator['missed']) if (accumulator['correct'] + accumulator['missed']) != 0 else 0
+  f1 = 2 * precision * recall / (precision + recall)if (precision + recall) != 0 else 0
 
   return f1
 
@@ -493,7 +537,7 @@ def conll_srl_decoder_np(predictions, targets, predicate_predictions, words,
                                                 pred_srl_eval_file,
                                                 gold_srl_eval_file)
 
-    return 0
+    return 1
 
 
 def conll_srl_eval_np(predictions, targets, predicate_predictions, words, mask,
@@ -517,9 +561,9 @@ def conll_srl_eval_np(predictions, targets, predicate_predictions, words, mask,
   accumulator['excess'] += excess
   accumulator['missed'] += missed
 
-  precision = accumulator['correct'] / (accumulator['correct'] + accumulator['excess'])
-  recall = accumulator['correct'] / (accumulator['correct'] + accumulator['missed'])
-  f1 = 2 * precision * recall / (precision + recall)
+  precision = accumulator['correct'] / (accumulator['correct'] + accumulator['excess']) if (accumulator['correct'] + accumulator['excess']) != 0 else 0
+  recall = accumulator['correct'] / (accumulator['correct'] + accumulator['missed']) if (accumulator['correct'] + accumulator['missed']) != 0 else 0
+  f1 = 2 * precision * recall / (precision + recall)  if (precision + recall) != 0 else 0
 
   return f1
 
@@ -645,7 +689,8 @@ def get_accumulator(fn_name):
 
 
 def get_accumulators(task_config):
-    tf.logging.log(tf.logging.INFO, "evaluation_fns_np.get_accumulators")
+    tf.logging.log(tf.logging.INFO,
+                   f"evaluation_fns_np.get_accumulators {task_config}")
     eval_accumulators = {}
     # for i in layer_task_config:
     for task, task_map in task_config.items():
@@ -654,25 +699,26 @@ def get_accumulators(task_config):
     return eval_accumulators
 
 
-def get_params(task, task_map, predictions, features, labels, reverse_maps, tokens_to_keep):
-  # always pass through predictions, targets and mask
-  tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.get_params({task})")
-  params = {'predictions': predictions['%s_predictions' % task],
-            'targets': labels[task],
-            'mask': tokens_to_keep}
-  if 'params' in task_map:
-    params_map = task_map['params']
-    for param_name, param_values in params_map.items():
-      if 'reverse_maps' in param_values:
-        params[param_name] = {
-            map_name: reverse_maps[map_name] for map_name in param_values['reverse_maps']}
-      elif 'label' in param_values:
-        params[param_name] = labels[param_values['label']]
-      elif 'feature' in param_values:
-        params[param_name] = features[param_values['feature']]
-      elif 'layer' in param_values:
-        params[param_name] = predictions[
-            f"{param_values['layer']}_{param_values['output']}"]
-      else:
-        params[param_name] = param_values['value']
-  return params
+def get_params(task, task_map, predictions, features, labels, reverse_maps,
+               tokens_to_keep):
+    # always pass through predictions, targets and mask
+    tf.logging.log(tf.logging.INFO, f"evaluation_fns_np.get_params({task})")
+    params = {'predictions': predictions[f'{task}_predictions'],
+                'targets': labels[task],
+                'mask': tokens_to_keep}
+    if 'params' in task_map:
+        params_map = task_map['params']
+        for param_name, param_values in params_map.items():
+            if 'reverse_maps' in param_values:
+                params[param_name] = {
+                    map_name: reverse_maps[map_name] for map_name in param_values['reverse_maps']}
+            elif 'label' in param_values:
+                params[param_name] = labels[param_values['label']]
+            elif 'feature' in param_values:
+                params[param_name] = features[param_values['feature']]
+            elif 'layer' in param_values:
+                params[param_name] = predictions[
+                    f"{param_values['layer']}_{param_values['output']}"]
+            else:
+                params[param_name] = param_values['value']
+    return params

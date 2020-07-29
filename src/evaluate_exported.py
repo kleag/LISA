@@ -45,6 +45,7 @@ arg_parser.set_defaults(debug=False, ensemble=False)
 args, leftovers = arg_parser.parse_known_args()
 
 util.init_logging(tf.logging.INFO)
+tf.logging.log(tf.logging.INFO, f"LISA Eval exported model")
 
 if not os.path.isdir(args.save_dir):
   util.fatal_error("save_dir not found: %s" % args.save_dir)

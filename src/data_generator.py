@@ -33,7 +33,7 @@ def conll_data_generator(filenames, data_config):
                                         split_line, datum_idx)
                                     tf.logging.log(
                                         tf.logging.INFO,
-                                        f"conll_data_generator dispatching: "
+                                        f"conll_data_generator dispatching for {d}: "
                                         f"{converter_name}, "
                                         f"{converter_params}")
                                     data = data_converters.dispatch(
@@ -43,10 +43,17 @@ def conll_data_generator(filenames, data_config):
                         buf.append(tuple(data_vals))
                     else:
                         if buf:
-                                sents += 1
-                                yield buf
-                                buf = []
-                        # print()
+                            sents += 1
+                            tf.logging.log(
+                                tf.logging.INFO,
+                                f"data_generator.conll_data_generator "
+                                f"yielding buf: {buf}: ")
+                            yield buf
+                            buf = []
             # catch the last one
             if buf:
+                tf.logging.log(
+                    tf.logging.INFO,
+                    f"data_generator.conll_data_generator "
+                    f"yielding last buf from {filename}: {buf}: ")
                 yield buf

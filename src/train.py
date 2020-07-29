@@ -45,6 +45,7 @@ arg_parser.set_defaults(debug=False, num_gpus=1, keep_k_best_models=1)
 args, leftovers = arg_parser.parse_known_args()
 
 util.init_logging(tf.logging.INFO)
+tf.logging.log(tf.logging.INFO, "LISA training")
 
 # Load all the various configurations
 # todo: validate json

@@ -34,6 +34,11 @@ def load_hparams(args, model_config):
 def get_input_fn(vocab, data_config, data_files, batch_size, num_epochs,
                  shuffle, shuffle_buffer_multiplier=1, embedding_files=None):
     # this needs to be created from here (lazily) so that it ends up in the same tf.Graph as everything else
+    tf.logging.log(
+        tf.logging.INFO,
+        f"train_utils.get_input_fn: {vocab}, {data_config}, "
+        f"{data_files}, {batch_size}, {num_epochs}, {shuffle}")
+
     vocab_lookup_ops = vocab.create_vocab_lookup_ops(embedding_files)
 
     return dataset.get_data_iterator(data_files, data_config,

@@ -40,10 +40,10 @@ class Vocab:
 
   '''
   Creates tf.contrib.lookup ops for all the vocabs defined in self.data_config.
-  
-  Args: 
+
+  Args:
     word_embedding_file: File containing word embedding vocab, with words in the first space-separated column
-    
+
   Returns:
     Map from vocab names to tf.contrib.lookup ops, map from vocab names to vocab sizes
   '''
@@ -75,15 +75,15 @@ class Vocab:
 
   '''
   Gets the cached vocab ops for the given datafile, creating them if they already exist.
-  This is needed in order to avoid re-creating duplicate lookup ops for each dataset input_fn, 
+  This is needed in order to avoid re-creating duplicate lookup ops for each dataset input_fn,
   since the lookup ops need to be called lazily from the input_fn in order to end up in the same tf.Graph.
-  
+
   Args:
     word_embedding_file: (Optional) file containing word embedding vocab, with words in the first space-separated column
-  
+
   Returns:
     Map from vocab names to tf.contrib.lookup ops.
-    
+
   '''
   def get_lookup_ops(self, word_embedding_file=None):
     if self.vocab_lookups is None:
@@ -94,15 +94,18 @@ class Vocab:
   '''
   Generates vocab files with counts for all the data with the vocab key
   set to True in data_config. Assumes the input file is in CoNLL format.
-  
+
   Args:
     filename: Name of data file to generate vocab files from
     data_config: Data configuration map
-  
+
   Returns:
     Map from vocab names to their sizes
   '''
   def create_load_or_update_vocab_files(self, data_config, save_dir, filenames=None, update_only=False):
+    tf.logging.log(
+        tf.logging.INFO,
+        f"vocab.create_load_or_update_vocab_files {data_config}, {save_dir}, {filenames}")
 
     # init maps
     vocabs = []
@@ -183,6 +186,9 @@ class Vocab:
         for k, v in this_vocab_map.items():
           print("%s\t%d" % (k, v), file=f)
 
+    tf.logging.log(
+        tf.logging.INFO,
+        f"vocab.create_load_or_update_vocab_files DONE")
     return {k: len(vocabs[vocabs_index[k]]) for k in vocabs_index.keys()}
 
   def make_vocab_files(self, data_config, save_dir, filenames=None):

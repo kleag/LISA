@@ -47,7 +47,7 @@ arg_parser.set_defaults(debug=False, ensemble=False)
 args, leftovers = arg_parser.parse_known_args()
 
 util.init_logging(tf.logging.INFO)
-tf.logging.log(tf.logging.INFO, f"Logging initialized")
+tf.logging.log(tf.logging.INFO, f"LISA Analyze text")
 
 if not os.path.isdir(args.save_dir):
   util.fatal_error("save_dir not found: %s" % args.save_dir)
@@ -74,13 +74,13 @@ text_filenames = leftovers if leftovers else []
 
 vocab = Vocab(data_config, args.save_dir)
 vocab.update(test_filenames)
-tf.logging.log(tf.logging.INFO, f"Vocabulary initialized")
+tf.logging.log(tf.logging.INFO, f"analyze_text: vocabulary initialized")
 
 embedding_files = [embeddings_map['pretrained_embeddings'] for embeddings_map in model_config['embeddings'].values()
                    if 'pretrained_embeddings' in embeddings_map]
 
 nlp = spacy.load('en')
-tf.logging.log(tf.logging.INFO, f"Spacy initialized")
+tf.logging.log(tf.logging.INFO, f"analyze_text: parser initialized")
 
 # Generate mappings from feature/label names to indices in the model_fn inputs
 # feature_idx_map = {}
@@ -103,6 +103,8 @@ feature_idx_map, label_idx_map = util.load_feat_label_idx_maps(data_config)
 # create transition parameters if training or decoding with crf/viterbi
 # need to load these here for ensembling (they're also loaded by the model)
 transition_params = util.load_transition_params(layer_task_config, vocab)
+tf.logging.log(tf.logging.INFO,
+               f"analyze_text transition_params: {transition_params}")
 
 if args.ensemble:
     predict_fns = [
@@ -131,17 +133,22 @@ else:
   #return '\n'.join(lines)
 
 def eval_fn(input_op, sess):
+    tf.logging.log(tf.logging.INFO, f"analyze_text.eval_fn({input_op})")
     eval_accumulators = eval_fns.get_accumulators(task_config)
     eval_results = {}
     i = 0
     while True:
         i += 1
+        tf.logging.log(tf.logging.INFO, f"analyze_text.eval_fn i = {i}")
         try:
             # input_np = sess.run(dev_input_fn())
             input_np = sess.run(input_op)
+            tf.logging.log(tf.logging.INFO, f"analyze_text.eval_fn input session has finished running")
             predictor_input = {'input': input_np}
             predictions = [
                 predict_fn(predictor_input) for predict_fn in predict_fns]
+            tf.logging.log(tf.logging.INFO, f"analyze_text.eval_fn predictions size = {len(predictions)}")
+            tf.logging.log(tf.logging.INFO, f"analyze_text.eval_fn predictions = {predictions}")
 
             shape = input_np.shape
             batch_size = shape[0]
@@ -153,6 +160,7 @@ def eval_fn(input_op, sess):
                 feats['word'] == constants.PAD_VALUE, 0, 1)
 
             combined_predictions = predictions[0]
+            tf.logging.log(tf.logging.INFO, f"analyze_text.eval_fn combined_predictions = {combined_predictions}")
 
             # todo: implement ensembling
             combined_scores = {
@@ -173,7 +181,7 @@ def eval_fn(input_op, sess):
 
             for task, tran_params in transition_params.items():
                 task_predictions = np.empty_like(
-                    combined_predictions['%s_predictions' % task])
+                    combined_predictions[f'{task}_predictions'])
                 token_take_mask = util.get_token_take_mask(
                     task, task_config, combined_predictions)
                 if token_take_mask is not None:
@@ -225,7 +233,7 @@ def eval_fn(input_op, sess):
                     eval_result = eval_fns.dispatch(
                         eval_map['name'])(**eval_fn_params)
 
-
+                    tf.logging.log(tf.logging.INFO, f"analyze_text.eval_fn after dispatching. eval_result: {eval_result}")
                     # write predicted labels
                     # called by conll_srl_eval called called by conll_srl_eval_np dispatched to by eval_fns.dispatch
 
@@ -245,10 +253,21 @@ def eval_fn(input_op, sess):
 
                     #eval_results[eval_name] = eval_result
         except tf.errors.OutOfRangeError:
+            tf.logging.log(
+                tf.logging.INFO,
+                f"analyze_text.eval_fn got OutOfRangeError: breaking out")
             break
 
-    tf.logging.log(tf.logging.INFO, f"analyze_text.eval_fn result: {eval_results}")
+    tf.logging.log(tf.logging.INFO,
+                   f"analyze_text.eval_fn result: {eval_results}")
 
+
+dep_transcat_table = {
+    "compound": "nn",
+    "acl": "vmod",
+    "oprd": "dep",
+    "attr": "xcomp"
+}
 
 with tf.Session() as sess:
 
@@ -266,6 +285,7 @@ with tf.Session() as sess:
     tokenized_files = []
     tokenized_filenames = []
     for text_file in text_filenames:
+        tf.logging.log(tf.logging.INFO, f"analyze_text analyzing: {text_file}")
         temp = tempfile.NamedTemporaryFile(mode='w+t')
         with open(text_file, 'r') as f:
             text = f.read()
@@ -279,16 +299,18 @@ with tf.Session() as sess:
                     if len(token.text) > 0 and token.text != '\n':
                         # 0:domain  1:sent_id 2:id  3:word+word_type
                         # 4:gold_pos 5:auto_pos    6:parse_head  7:parse_label
-
+                        if token.dep_ == "ROOT":
+                            depid = 0
+                            dep = "root"
+                        else:
+                            depid = int(tokens[token.head]) + 1
+                            dep = dep_transcat_table[token.dep_] if token.dep_ in dep_transcat_table else token.dep_
                         line = (f'conll05\t{sentence_id}\t{token_id}'
-                                f'\t{token.text}\t{token.pos_}\t{token.tag_}'
-                                f'\t{tokens[token.head]}\t{token.dep_}'
-                                f'\t-\t-\t-\t-\t-\t-\t-\t-\n')
-                        #line = f'conll05\t{sentence_id}\t{token_id}
-                        #\t{token.text}\t_\t_\t_\t_\n'
-                        #line = f'{token_id}\t{token.text}\t_\t_\t_\t_\t_\t_\n'
+                                f'\t{token.text}\t{token.tag_}\t{token.tag_}'
+                                f'\t{depid}\t{dep}'
+                                f'\t_\t-\t-\t-\t-\tO\n')
                         tf.logging.log(tf.logging.INFO,
-                                       f"Writing to temp file {temp.name}: "
+                                       f"analyze_text writing to temp file {temp.name}: "
                                        f"{line}")
                         temp.write(line)
             temp.flush()
@@ -309,15 +331,11 @@ with tf.Session() as sess:
 
     sess.run(tf.tables_initializer())
 
-    #for test_file, test_input_op in test_input_ops.items():
-        #tf.logging.log(tf.logging.INFO, "Evaluating on test file: %s" % str(test_file))
-        #eval_fn(test_input_op, sess)
-
     for tokenized_filename, text_input_op in text_input_ops.items():
         tf.logging.log(tf.logging.INFO,
-                       f"Analyzing text file: {tokenized_filename}")
+                       f"analyze_text analyzing tokenized file: {tokenized_filename} with {text_input_op}")
         eval_fn(text_input_op, sess)
-    #tf.logging.log(tf.logging.INFO, f"Pausing 20 seconds")
-    #time.sleep(20)
+    tf.logging.log(tf.logging.INFO, f"Pausing 20 seconds")
+    time.sleep(200)
     for tokenized_file in tokenized_files:
         tokenized_file.close()
